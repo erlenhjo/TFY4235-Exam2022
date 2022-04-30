@@ -7,7 +7,7 @@ Created on Thu Apr 28 08:57:32 2022
 
 import numpy as np
 import matplotlib.pyplot as plt
-# from numba import njit
+from matplotlib.collections import LineCollection
 from scipy.optimize import curve_fit
 from time import time, localtime, asctime
 import os
@@ -46,7 +46,7 @@ def task_a():
     alpha=0
     B=np.zeros(3)
     
-    spin_off_z=normalize(np.array([1,0,9],dtype=np.float64))
+    spin_off_z=normalize(np.array([1,0,20],dtype=np.float64))
     
     particles_x=1
     particles_y=1
@@ -65,15 +65,35 @@ def task_a():
     time_steps=100000
     S=spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range)[1,1]
     t=np.arange(time_steps)*dt
-    plt.figure()
-    plt.plot(t,S[:,0],label="S_x")
-    plt.plot(t,S[:,1],label="S_y")
-    plt.plot(t,S[:,2],label="S_z")
-    plt.legend()
+
+    fig,ax=plt.subplots()
+    ax.plot(t,S[:,0],label="S_x")
+    ax.plot(t,S[:,1],label="S_y")
+    ax.plot(t,S[:,2],label="S_z")
+    ax.set_xlabel("t [ps]")
+    ax.set_ylabel("Spin [unitless]")
+    ax.legend()
+       
+    fig.tight_layout()
+    fig.savefig("figures/task_a_time")
     
-    plt.figure()
-    plt.plot(S[:10000,0],S[:10000,1],vert_colors=t[:10000],label="S")
-    plt.legend()
+    fig, ax = plt.subplots()
+    t_steps=10000
+    points = np.array([S[:t_steps,0], S[:t_steps,1]]).T.reshape(-1,1,2) 
+    segments = np.concatenate([points[:-1], points[1:]], axis=1) 
+    lc = LineCollection(segments, cmap='cividis', linewidth=3) 
+    lc.set_array(t[:t_steps])  
+    ax.add_collection(lc) 
+    ax.autoscale()
+    ax.set_xlabel("S_x [unitless]") 
+    ax.set_ylabel("S_y [unitless]") 
+    ax.scatter(S[0,0],S[0,1],marker="x",label="Start",c="r",zorder=10)
+    ax.legend()
+    clb=plt.colorbar(lc)
+    clb.ax.set_title('t [ps]',fontsize=15)
+    
+    fig.tight_layout()
+    fig.savefig("figures/task_a_above")
     
         
 def task_b():
@@ -83,7 +103,7 @@ def task_b():
     alpha=0.1
     B=np.zeros(3)
     
-    spin_off_axis_z=normalize(np.array([1,0,2],dtype=np.float64))
+    spin_off_axis_z=normalize(np.array([1,0,20],dtype=np.float64))
     
     particles_x=1
     particles_y=1
@@ -101,22 +121,50 @@ def task_b():
     time_steps=100000
     S=spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range)[1,1]
     t=np.arange(time_steps)*dt
-    plt.figure()
-    plt.plot(t,S[:,0],label="x")
-    plt.plot(t,S[:,1],label="y")
-    plt.plot(t,S[:,2],label="z")
     
-    if alpha>0:
-        x_0=S_0[1,1,0]
-        f=lambda t, omega ,tau: x_0*np.cos(omega*t)*np.exp(-t/tau)
-        popt,_=curve_fit(f, t,S[:,0])
-        print(popt)
-        omega=np.abs(popt[0])
-        tau=popt[1]
-        plt.plot(t,x_0*np.exp(-t/tau),"--")
-        plt.plot(t,-x_0*np.exp(-t*omega*alpha),"--")
+    fig,ax=plt.subplots(nrows=2,sharex=True)
+    ax[1].plot(t,S[:,0],label="S_x")
+    ax[1].plot(t,S[:,1],label="S_y")
+    ax[0].plot(t,S[:,2],label="S_z")
+    ax[1].set_xlabel("t [ps]")
+    ax[0].set_ylabel("Spin [unitless]")
+    ax[1].set_ylabel("Spin [unitless]")
+    ax[0].legend()
+    ax[1].legend()
+
+
+    x_0=S_0[1,1,0]
+    f=lambda t, omega ,tau: x_0*np.cos(omega*t)*np.exp(-t/tau)
+    popt,_=curve_fit(f, t,S[:,0])
+    omega=np.abs(popt[0])
+    tau=popt[1]
+    print(tau, omega, 1/(omega*alpha))
+    ax[1].plot(t,x_0*np.exp(-t/tau),"--",label="exp(-t/τ)")
+    ax[1].plot(t,-x_0*np.exp(-t*omega*alpha),"--",label="-exp(-tωα)")
+    ax[1].legend(loc="upper right")
     
-    plt.legend(loc="upper right")
+    fig.tight_layout()    
+    fig.savefig("figures/task_b_time")
+    
+    fig, ax = plt.subplots()
+    t_steps=30000
+    points = np.array([S[:t_steps,0], S[:t_steps,1]]).T.reshape(-1,1,2) 
+    segments = np.concatenate([points[:-1], points[1:]], axis=1) 
+    lc = LineCollection(segments, cmap='cividis', linewidth=3) 
+    lc.set_array(t[:t_steps])  
+    ax.add_collection(lc) 
+    ax.autoscale()
+    ax.set_xlabel("S_x [unitless]") 
+    ax.set_ylabel("S_y [unitless]") 
+    ax.scatter(S[0,0],S[0,1],marker="x",label="Start",c="r",zorder=10)
+    ax.legend()
+    
+    clb=plt.colorbar(lc)
+    clb.ax.set_title('t [ps]',fontsize=15)
+    
+    fig.tight_layout()    
+    fig.savefig("figures/task_b_above")
+    
 
 def task_c():
     #global dt
@@ -125,11 +173,11 @@ def task_c():
     alpha=0.1
     B=np.zeros(3)
     
-    spin1=normalize(np.array([1,0,0],dtype=np.float64))
+    spin1=normalize(np.array([1,0,20],dtype=np.float64))
     spin2=normalize(np.array([0,0,1],dtype=np.float64))
     
-    time_steps=10000
-    particles_x=100
+    time_steps=50000
+    particles_x=200
     particles_y=1
     
     X,Y=particles_x+2,particles_y+2
@@ -146,36 +194,144 @@ def task_c():
             else:
                 S_0[x,y]=spin2
     
-    S=spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range)[:,1]
+    S=spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range)[1:-1,1]
     t=np.arange(time_steps)*dt
     
+    
+    
+    # plt.figure()
+    # plt.imshow(S[:,:,0],aspect="auto")
+    # plt.xlabel("t [ps]")
+    # plt.ylabel("Spin #")
+    # clb=plt.colorbar()
+    # clb.ax.set_title('S_x [unitless]', fontsize=10)
+    # plt.tight_layout()    
+    # plt.savefig("figures/task_c_imshow_x")
+    
+    # plt.figure()
+    # plt.imshow(S[:,:,1],aspect="auto")
+    # plt.xlabel("t [ps]")
+    # plt.ylabel("Spin #")
+    # clb=plt.colorbar()
+    # clb.ax.set_title('S_y [unitless]',fontsize=10)
+    # plt.tight_layout()    
+    # plt.savefig("figures/task_c_imshow_y")
+    
+    # plt.figure()
+    # plt.imshow(1-S[:,:,2],aspect="auto")
+    # plt.xlabel("t [ps]")
+    # plt.ylabel("Spin #")
+    # clb=plt.colorbar()
+    # clb.ax.set_title('S_z [unitless]',fontsize=10)
+    # plt.tight_layout()    
+    # plt.savefig("figures/task_c_imshow_z")
+    
+    
+    #### x over time ####
     plt.figure()
-    plt.imshow(S[1:(X-1),:,0],aspect="auto")
+    for x in range(0,3):
+        plt.plot(t,S[x,:,0],label=f"Spin nr. {x+1}")
+    for x in range(20,23):
+        plt.plot(t,S[x,:,0],label=f"Spin nr. {x+1}")    
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_x [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_c_time2_x")
     
     plt.figure()
-    for x in range(0,5):
-        plt.plot(t,S[x,:,0],label="x")
-     
-    plt.figure()
-    for x in range(0,5):
-        plt.plot(t,S[x,:,1],label="x")
+    for x in range(0,3):
+        plt.plot(t[20000:30000],S[x,20000:30000,0],label=f"Spin nr. {x+1}")
+    for x in range(20,23):
+        plt.plot(t[20000:30000],S[x,20000:30000,0],label=f"Spin nr. {x+1}")    
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_x [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_c_time3_x")
     
     plt.figure()
-    for x in range(0,5):
-        plt.plot(t,S[x,:,2],label="x")
+    for x in range(0,3):
+        plt.plot(t[40000:50000],S[x,40000:50000,0],label=f"Spin nr. {x+1}")
+    for x in range(20,23):
+        plt.plot(t[40000:50000],S[x,40000:50000,0],label=f"Spin nr. {x+1}")    
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_x [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_c_time4_x")
+    
+    
+    #### Close up ####
+    t_steps=5000
+    plt.figure()
+    for x in range(0,3):
+        plt.plot(t[:t_steps],S[x,:t_steps,0],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_x [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_c_time_x")
+    
+    plt.figure()
+    for x in range(0,3):
+        plt.plot(t[:t_steps],S[x,:t_steps,1],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_y [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_c_time_y")
+    
+    plt.figure()
+    for x in range(0,3):
+        plt.plot(t[:t_steps],S[x,:t_steps,2],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_z [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_c_time_z")
+    
+    
+    fig, _ax= plt.subplots(nrows=1,ncols=3,sharey=True, figsize=(16,4))
+    ax=_ax.flatten()
+    t_steps=5000
+    x_max=np.max(np.abs(S[0:4,:t_steps,0]))
+    y_max=np.max(np.abs(S[0:4,:t_steps,1]))
+    r_max=max(x_max,y_max)*1.05
+    
+    for x in range(0,3):
+        points = np.array([S[x,:t_steps,0], S[x,:t_steps,1]]).T.reshape(-1,1,2) 
+        segments = np.concatenate([points[:-1], points[1:]], axis=1) 
+        lc = LineCollection(segments, cmap='cividis', linewidth=3) 
+        lc.set_array(t[:t_steps])  
+        ax[x].add_collection(lc) 
+        ax[x].set_xlim(-r_max,r_max)
+        ax[x].set_ylim(-r_max,r_max) 
+        ax[x].scatter(S[x,0,0],S[x,0,1],marker="x",label="Start",c="r",zorder=10)
+        ax[x].set_title(f"Spin nr. {x+1}")
+        ax[x].legend()
+        ax[x].set_xlabel("S_x [unitless]")
         
+    ax[0].set_ylabel("S_y [unitless]")    
+    clb=fig.colorbar(lc,ax=ax)
+    clb.ax.set_title('t [ps]',fontsize=15)
+    
+    #fig.tight_layout()    
+    fig.savefig("figures/task_c_above")
+        
+    
 def task_d():
     #global dt
     
     d_z=0.1
     alpha=0
     B=np.zeros(3)
-    spin1=normalize(np.array([1,0,0],dtype=np.float64))
+    spin1=normalize(np.array([1,0,20],dtype=np.float64))
     spin2=normalize(np.array([0,0,1],dtype=np.float64))
     
-    time_steps=100000
+    time_steps=50_000
     J=1
-    particles_x=100
+    particles_x=200
     particles_y=1
     
     X,Y=particles_x+2,particles_y+2
@@ -191,21 +347,94 @@ def task_d():
             else:
                 S_0[x,y]=spin2
     
-    S=spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range)[:,1]
+    S=spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range)[1:-1,1]
     t=np.arange(time_steps)*dt
     
+    
+    
     plt.figure()
-    plt.imshow(S[1:(X-1),:,0],aspect="auto")
+    plt.imshow(S[:,:,0],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('S_x [unitless]', fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_d_imshow_x")
+    
+    plt.figure()
+    plt.imshow(S[:,:,1],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('S_y [unitless]',fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_d_imshow_y")
+    
+    plt.figure()
+    plt.imshow(1-S[:,:,2],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('1-S_z [unitless]',fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_d_imshow_z")
+    
+    plt.figure()
+    for x in range(0,6):
+        plt.plot(t,S[x,:,0],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_x [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_d_time_x")
+    
+    plt.figure()
+    for x in range(0,6):
+        plt.plot(t,S[x,:,1],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_y [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_d_time_y")
+    
+    plt.figure()
+    for x in range(0,6):
+        plt.plot(t,S[x,:,2],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_z [unitless]")
+    plt.legend()
+    
+    plt.tight_layout()    
+    plt.savefig("figures/task_d_time_z")
+    
+    
+    fig, _ax= plt.subplots(nrows=2,ncols=2,sharey=True, figsize=(12,10))
+    ax=_ax.flatten()
+    t_steps=5000
+    x_max=np.max(np.abs(S[0:4,:t_steps,0]))
+    y_max=np.max(np.abs(S[0:4,:t_steps,1]))
+    r_max=max(x_max,y_max)*1.1
     
     for x in range(0,4):
-        plt.figure()
-        plt.plot(t,S[x,:,0],label="x")
-        plt.plot(t,S[x,:,1],label="y")
-        plt.plot(t,S[x,:,2],label="z")
+        points = np.array([S[x,:t_steps,0], S[x,:t_steps,1]]).T.reshape(-1,1,2) 
+        segments = np.concatenate([points[:-1], points[1:]], axis=1) 
+        lc = LineCollection(segments, cmap='cividis', linewidth=3) 
+        lc.set_array(t[:t_steps])  
+        ax[x].add_collection(lc) 
+        ax[x].set_xlim(-r_max,r_max)
+        ax[x].set_ylim(-r_max,r_max) 
+        ax[x].scatter(S[x,0,0],S[x,0,1],marker="x",label="Start",c="r",zorder=10)
+        ax[x].set_title(f"Spin nr. {x+1}")
+        ax[x].legend()
+        ax[x].set_xlabel("S_x [unitless]")
+        ax[x].set_ylabel("S_y [unitless]")
         
-    plt.figure()
-    for x in range(0,4):
-        plt.plot(t,S[x,:,2])
+    clb=fig.colorbar(lc,ax=ax)
+    clb.ax.set_title('t [ps]',fontsize=15)
+    
+    #fig.tight_layout()    
+    fig.savefig("figures/task_d_above")
+    
     
     
 def task_e():
@@ -214,12 +443,12 @@ def task_e():
     alpha=0
     B=np.zeros(3)
     
-    spin1=normalize(np.array([1,0,0],dtype=np.float64))
+    spin1=normalize(np.array([1,0,20],dtype=np.float64))
     spin2=normalize(np.array([0,0,1],dtype=np.float64))
     
-    time_steps=100000
+    time_steps=10000
     J=1
-    particles_x=100
+    particles_x=30
     particles_y=1
     
     X,Y=particles_x, particles_y+2
@@ -230,7 +459,7 @@ def task_e():
     
     for x in x_range:
         for y in y_range:
-            if x==1:
+            if x==0:
                 S_0[x,y]=spin1
             else:
                 S_0[x,y]=spin2
@@ -238,18 +467,90 @@ def task_e():
     S=spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range)[:,1]
     t=np.arange(time_steps)*dt
     
+    
+    
     plt.figure()
     plt.imshow(S[:,:,0],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('S_x [unitless]', fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_e_imshow_x")
     
-    for x in range(1,4):
-        plt.figure()
-        plt.plot(t,S[x,:,0],label="x")
-        plt.plot(t,S[x,:,1],label="y")
-        plt.plot(t,S[x,:,2],label="z")
-        
     plt.figure()
-    for x in range(1,4):
-        plt.plot(t,S[x,:,2])
+    plt.imshow(S[:,:,1],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('S_y [unitless]',fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_e_imshow_y")
+    
+    plt.figure()
+    plt.imshow(1-S[:,:,2],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('1-S_z [unitless]',fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_e_imshow_z")
+    
+    plt.figure()
+    for x in range(0,6):
+        plt.plot(t,S[x,:,0],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_x [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_e_time_x")
+    
+    plt.figure()
+    for x in range(0,6):
+        plt.plot(t,S[x,:,1],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_y [unitless]")
+    plt.legend()
+    plt.tight_layout()    
+    plt.savefig("figures/task_e_time_y")
+    
+    plt.figure()
+    for x in range(0,6):
+        plt.plot(t,S[x,:,2],label=f"Spin nr. {x+1}")
+    plt.xlabel("t [ps]")
+    plt.ylabel("S_z [unitless]")
+    plt.legend()
+    
+    plt.tight_layout()    
+    plt.savefig("figures/task_e_time_z")
+    
+    
+    fig, _ax= plt.subplots(nrows=2,ncols=2,sharey=True, figsize=(12,10))
+    ax=_ax.flatten()
+    t_steps=5000
+    x_max=np.max(np.abs(S[0:4,:t_steps,0]))
+    y_max=np.max(np.abs(S[0:4,:t_steps,1]))
+    r_max=max(x_max,y_max)*1.1
+    
+    for x in range(-1,3):
+        points = np.array([S[x,:t_steps,0], S[x,:t_steps,1]]).T.reshape(-1,1,2) 
+        segments = np.concatenate([points[:-1], points[1:]], axis=1) 
+        lc = LineCollection(segments, cmap='cividis', linewidth=3) 
+        lc.set_array(t[:t_steps])  
+        ax[x].add_collection(lc) 
+        ax[x].set_xlim(-r_max,r_max)
+        ax[x].set_ylim(-r_max,r_max) 
+        ax[x].scatter(S[x,0,0],S[x,0,1],marker="x",label="Start",c="r",zorder=10)
+        ax[x].legend()
+        ax[x].set_title(f"Spin nr. {x+1}")
+        ax[x].set_xlabel("S_x [unitless]")
+        ax[x].set_ylabel("S_y [unitless]")
+        
+    clb=fig.colorbar(lc,ax=ax)
+    clb.ax.set_title('t [ps]',fontsize=15)
+    
+    #fig.tight_layout()    
+    fig.savefig("figures/task_e_above")
 
 def task_f():
     #global dt
@@ -280,12 +581,31 @@ def task_f():
     
     plt.figure()
     plt.imshow(S[:,:,0],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('S_x [unitless]', fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_f_imshow_x")
     
     plt.figure()
     plt.imshow(S[:,:,1],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('S_y [unitless]',fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_f_imshow_y")
     
     plt.figure()
-    plt.imshow(S[:,:,2],aspect="auto")
+    plt.imshow(1-S[:,:,2],aspect="auto")
+    plt.xlabel("t [ps]")
+    plt.ylabel("Spin #")
+    clb=plt.colorbar()
+    clb.ax.set_title('1-S_z [unitless]',fontsize=10)
+    plt.tight_layout()    
+    plt.savefig("figures/task_f_imshow_z")
+
     
 def task_f2D():
     #global dt, B_0
@@ -325,7 +645,7 @@ def task_f2D():
     
 def task_g():
     #global dt, B_0
-    alpha=0.1
+    alpha=0.5
     d_z=0
     B=np.array([0,0,B_0])
     T=20
@@ -350,26 +670,21 @@ def task_g():
     
     print(f"Simulation start: {asctime(localtime())}")
     tic=time()
-    S, mag_vals=thermal_spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range, T)
+    S, M=thermal_spin_heun(time_steps, dt, S_0, d_z, B, alpha, J, mu_s, gamma, k_b, x_range, y_range, T)
     toc=time()
     print(f"{particles_x*particles_y} particles, {time_steps} steps: Simulation time={toc-tic}")
     
-    t_avg_mag=np.mean(mag_vals[15000:])
-    t_var_mag=np.var(mag_vals[15000:])
+    
+
+    t_avg_M=np.mean(M[time_steps//2:])
+    t_var_M=np.var(M[time_steps//2:])
     
     t=np.arange(time_steps)*dt
     plt.figure()
-    plt.plot(t,mag_vals)
-    plt.plot(t,np.ones(time_steps)*t_avg_mag,"--")
+    plt.plot(t,M)
+    plt.plot(t[time_steps//2:],np.ones(time_steps)[time_steps//2:]*t_avg_M,"--")
     
-    plt.figure()
-    plt.imshow(S[:,:,0],aspect="auto")
     
-    plt.figure()
-    plt.imshow(S[:,:,1],aspect="auto")
-    
-    plt.figure()
-    plt.imshow(S[:,:,2],aspect="auto")
     
 def task_hi_gen():
     #global dt, gamma, mu_s, k_b
@@ -412,7 +727,7 @@ def task_hi_gen():
             M_file_path=os.path.join("data2",M_file_name)
             np.save(S_file_path,S)
             np.save(M_file_path,M)
-        
+               
 
 def task_hi_plot():
     #global dt, gamma, mu_s, k_b
@@ -451,9 +766,9 @@ def task_hi_plot():
             
             if i%10==0:
                 t=np.arange(time_steps)*dt
-                #plt.figure()
-                #plt.plot(t,M)
-                #plt.plot(t[time_steps//2:],np.ones(time_steps)[time_steps//2:]*t_avg_M,"--")
+                plt.figure()
+                plt.plot(t,M)
+                plt.plot(t[time_steps//2:],np.ones(time_steps)[time_steps//2:]*t_avg_M,"--")
         
             avg[j,i]=t_avg_M
             var[j,i]=t_var_M

@@ -9,10 +9,10 @@ import tasks
 
 if __name__=="__main__":
     
-    tasks.task_a()
+    #tasks.task_a()
     #tasks.task_b()
     #tasks.task_c()
-    #tasks.task_d()
+    tasks.task_d()
     #tasks.task_e()
     #tasks.task_f()
     #tasks.task_f2D()
@@ -20,5 +20,6 @@ if __name__=="__main__":
     #tasks.task_hi_gen()
     #tasks.task_hi_plot()
 
-    
+
+
     

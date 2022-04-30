@@ -26,6 +26,30 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 @njit(cache=True)
 def F_eff_j(S_j: np.ndarray, S_k_vecs: np.ndarray, d_z: float, B: np.ndarray, J: float, mu_s: float) -> np.ndarray:    
+    """
+    Calculates the 
+
+    Parameters
+    ----------
+    S_j : np.ndarray(3)
+        Spin vector of state j.
+    S_k_vecs : np.ndarray
+        Sum of spin vectors of nearest neighbors.
+    d_z : float
+        Anisotropy constant.
+    B : np.ndarray
+        External magnetic field
+    J : float
+        Coupling factor between spins
+    mu_s : float
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
     e_z=np.array([0,0,1])
     return J/mu_s*S_k_vecs + 1/mu_s*(2*d_z*S_j*e_z) + B
 
